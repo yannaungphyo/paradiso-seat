@@ -5,8 +5,50 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Paradiso Pyay Cinema - Seat Management (Admin)</title>
     
-    <!-- Socket.io Client Library CDN -->
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <!-- Firebase App & Database (Modular SDK CDN) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getDatabase, ref, set, onValue, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+        
+        // Firebase Configuration
+        const firebaseConfig = {
+            databaseURL: "https://paradisopyay-91753-default-rtdb.firebaseio.com/"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        // Firebase သို့ ခုံအချက်အလက် ပို့ရန်
+        window.updateSeatInFirebase = function(seatId, color) {
+            const seatRef = ref(db, 'seats/' + seatId);
+            if (color) {
+                set(seatRef, color);
+            } else {
+                remove(seatRef);
+            }
+        };
+
+        // Firebase ရှိ ခုံအချက်အလက် အားလုံးဖျက်ရန်
+        window.resetAllFirebase = function() {
+            const seatsRef = ref(db, 'seats');
+            remove(seatsRef);
+        };
+
+        // ဖုန်းအချင်းချင်း တစ်ဖက်ကပြောင်းရင် အခြားဖုန်းများပါ အချိန်နဲ့တပြေးညီ လိုက်ပြောင်းရန် (Real-time Sync)
+        const seatsRef = ref(db, 'seats');
+        onValue(seatsRef, (snapshot) => {
+            const data = snapshot.val() || {};
+            document.querySelectorAll('.seat').forEach(seat => {
+                seat.classList.remove('admin-red', 'admin-yellow', 'admin-purple');
+            });
+            for (let seatId in data) {
+                const seatEl = document.getElementById(seatId);
+                if (seatEl) {
+                    seatEl.classList.add('admin-' + data[seatId]);
+                }
+            }
+        });
+    </script>
 
     <style>
         * { box-sizing: border-box; font-family: Segoe UI, Tahoma, sans-serif; }
@@ -120,52 +162,6 @@
     </div>
 
     <script>
-        // Render Backend နှင့် Socket.io ချိတ်ဆက်ခြင်း
-        const socket = io("https://paradiso-seat.onrender.com");
-
-        // ဆာဗာမှ ခုံအချက်အလက် ပို့ရန်
-        window.updateSeatInServer = function(seatId, color) {
-            socket.emit('updateSeat', { seatId, color });
-        };
-
-        // ဆာဗာရှိ ခုံအချက်အလက် အားလုံးဖျက်ရန်
-        window.resetAllServer = function() {
-            socket.emit('resetSeats');
-        };
-
-        // အခြားဖုန်းများမှ ပြောင်းလဲလိုက်လျှင် အချိန်နဲ့တပြေးညီ လိုက်ပြောင်းရန် (Real-time Sync)
-        socket.on('initSeats', (data) => {
-            updateAllSeats(data);
-        });
-
-        socket.on('seatUpdated', ({ seatId, color }) => {
-            const seatEl = document.getElementById(seatId);
-            if (seatEl) {
-                seatEl.classList.remove('admin-red', 'admin-yellow', 'admin-purple');
-                if (color) {
-                    seatEl.classList.add('admin-' + color);
-                }
-            }
-        });
-
-        socket.on('allSeatsReset', () => {
-            document.querySelectorAll('.seat').forEach(seat => {
-                seat.classList.remove('admin-red', 'admin-yellow', 'admin-purple');
-            });
-        });
-
-        function updateAllSeats(data) {
-            document.querySelectorAll('.seat').forEach(seat => {
-                seat.classList.remove('admin-red', 'admin-yellow', 'admin-purple');
-            });
-            for (let seatId in data) {
-                const seatEl = document.getElementById(seatId);
-                if (seatEl && data[seatId]) {
-                    seatEl.classList.add('admin-' + data[seatId]);
-                }
-            }
-        }
-
         const seatStructure = [
             { label: 'A', class: 'price-4000', seats: [26,25,24,23, 0, 22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5, 0, 4,3,2,1] },
             { label: 'B', class: 'price-5000', seats: [26,25,24,23, 0, 22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5, 0, 4,3,2,1] },
@@ -223,25 +219,21 @@
                     seatBtn.className = `seat ${row.class}`;
                     seatBtn.innerText = num;
                     
+                    // တစ်ချက်နှိပ်လျှင် ရွေးထားသောအရောင် ပြောင်းသွားမည် (တစ်ချက်တည်းနဲ့ မပျက်တော့ပါ)
                     seatBtn.onclick = () => {
                         if (!selectedAdminColor) {
                             alert('ကျေးဇူးပြု၍ အပေါ်ဘက်မှ အနီ/အဝါ/ခရမ်း ရောင်တစ်မျိုးမျိုးကို အရင်နှိပ်ပါ။');
                             return;
                         }
-                        const isCurrentlyColored = seatBtn.classList.contains('admin-' + selectedAdminColor);
-                        if (isCurrentlyColored) {
-                            seatBtn.classList.remove('admin-' + selectedAdminColor);
-                            window.updateSeatInServer(seatId, null);
-                        } else {
-                            seatBtn.classList.remove('admin-red', 'admin-yellow', 'admin-purple');
-                            seatBtn.classList.add('admin-' + selectedAdminColor);
-                            window.updateSeatInServer(seatId, selectedAdminColor);
-                        }
+                        seatBtn.classList.remove('admin-red', 'admin-yellow', 'admin-purple');
+                        seatBtn.classList.add('admin-' + selectedAdminColor);
+                        window.updateSeatInFirebase(seatId, selectedAdminColor);
                     };
 
+                    // နှစ်ချက် (Double Click) နှိပ်မှသာ အရောင်ပြန်ပယ်ဖျက် (Reset) ဖြစ်မည်
                     seatBtn.ondblclick = () => {
                         seatBtn.classList.remove('admin-red', 'admin-yellow', 'admin-purple');
-                        window.updateSeatInServer(seatId, null);
+                        window.updateSeatInFirebase(seatId, null);
                     };
 
                     rowDiv.appendChild(seatBtn);
@@ -278,7 +270,7 @@
                 document.querySelectorAll('.seat').forEach(seat => {
                     seat.classList.remove('admin-red', 'admin-yellow', 'admin-purple');
                 });
-                window.resetAllServer();
+                window.resetAllFirebase();
                 resetClickCount = 0;
                 resetBtn.innerText = 'Cleared!';
                 setTimeout(() => {
