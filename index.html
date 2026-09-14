@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="my">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paradiso Pyay Cinema - Seat Management (Admin)</title>
+    
+    <!-- Firebase App & Database (Modular SDK CDN) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getDatabase, ref, set, onValue, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+        
+        // Firebase Configuration
+        const firebaseConfig = {
+            databaseURL: "https://paradisopyay-91753-default-rtdb.firebaseio.com/"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        // Firebase သို့ ခုံအချက်အလက် ပို့ရန်
+        window.updateSeatInFirebase = function(seatId, color) {
+            const seatRef = ref(db, 'seats/' + seatId);
+            if (color) {
+                set(seatRef, color).catch((error) => {
+                    console.error("Firebase write error:", error);
+                });
+            } else {
+                remove(seatRef).catch((error) => {
+                    console.error("Firebase remove error:", error);
+                });
+            }
+        };
+
+        // Firebase ရှိ ခုံအချက်အလက် အားလုံးဖျက်ရန်
+        window.resetAllFirebase = function() {
+            const seatsRef = ref(db, 'seats');
+            remove(seatsRef).catch((error) => {
+                console.error("Firebase reset error:", error);
+            });
+        };
+
+        // ဖုန်းအချင်းချင်း တစ်ဖက်ကပြောင်းရင် အခြားဖုန်းများပါ အချိန်နဲ့တပြေးညီ လိုက်ပြောင်းရန် (Real-time Sync)
+        const seatsRef = ref(db, 'seats');
+        onValue(seatsRef, (snapshot) => {
+            const data = snapshot.val() || {};
+            document.querySelectorAll('.seat').forEach(seat => {
+                seat.classList.remove('admin-red', 'admin-yellow', 'admin-purple');
+            });
+            for (let seatId in data) {
+                const seatEl = document.getElementById(seatId);
+                if (seatEl) {
+                    seatEl.classList.add('admin-' + data[seatId]);
+                }
+            }
+        });
+    </script>
+
+    <style>
+        * { box-sizing: border-box; font-family: Segoe UI, Tahoma, sans-serif; }
+        body { background: #121212; color: #fff; padding: 15px; margin: 0; }
+        
+        .admin-controls {
+            background: #222; padding: 15px; border-radius: 8px; margin-bottom: 20px;
+            display: flex; gap: 15px; align-items: center; flex-wrap: wrap;
+        }
+        .color-btn {
+            width: 90px; height: 38px; border: 2px solid transparent; border-radius: 6px;
+            color: #fff; font-weight: bold; cursor: pointer; text-shadow: 0 1px 2px #000;
+        }
+        .color-btn.selected { border-color: #fff; outline: 3px solid #ffeb3b; }
+
+        .reset-btn {
+            background: #d32f2f; color: #fff; border: none; padding: 0 16px; height: 38px;
+            border-radius: 6px; font-weight: bold; cursor: pointer; margin-left: auto; font-size: 13px;
+        }
+        .reset-btn:hover { background: #b71c1c; }
+
+        .seat-map-outer {
+            width: 100%;
+            overflow-x: auto;
+            background: #1e1e1e;
+            padding: 20px 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+
+        .seat-map-inner {
+            display: inline-block;
+            white-space: nowrap;
+            min-width: 980px;
+        }
+
+        .screen-title {
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            color: #ffeb3b;
+            margin-bottom: 10px;
+            letter-spacing: 1px;
+        }
+
+        .screen {
+            background: #e0e0e0; color: #000; text-align: center; padding: 8px;
+            font-weight: bold; margin: 0 auto 25px auto; width: 100%; border-radius: 4px;
+            box-shadow: 0 0 15px rgba(255,255,255,0.4); letter-spacing: 2px;
+        }
+        
+        .seat-row { display: flex; gap: 5px; margin-bottom: 6px; align-items: center; }
+        
+        .row-label { 
+            width: 35px; min-width: 35px; line-height: 32px; text-align: center; 
+            font-weight: bold; color: #fff; font-size: 14px; margin-left: 10px;
+        }
+        
+        .seat {
+            width: 26px; height: 32px; min-width: 26px; border-radius: 3px; font-size: 11px;
+            display: inline-flex; align-items: center; justify-content: center; cursor: pointer;
+            user-select: none; color: #000; font-weight: bold; transition: transform 0.1s;
+        }
+        .seat:hover { transform: scale(1.15); z-index: 10; }
+        
+        .empty { width: 26px; min-width: 26px; height: 32px; }
+        
+        .price-4000 { background-color: #777670; color: #fff; }
+        .price-5000 { background-color: #9BBB59; }
+        .price-6000 { background-color: #FABF8F; }
+        .price-7000 { background-color: #4BACC6; }
+        .price-8000 { background-color: #CCC0D9; }
+        .price-20000 { background-color: #B97034; color: #fff; }
+
+        .admin-red { background-color: #ff3333 !important; color: white !important; }
+        .admin-yellow { background-color: #ffcc00 !important; color: black !important; }
+        .admin-purple { background-color: #9933ee !important; color: white !important; }
+
+        .legend { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; margin-top: 20px; font-size: 12px; }
+        .legend-item { display: flex; align-items: center; gap: 6px; }
+        .legend-box { width: 16px; height: 16px; border-radius: 3px; }
+    </style>
+</head>
+<body>
+
+    <div class="admin-controls">
+        <span><b>Admin အရောင်ရွေးပါ:</b></span>
+        <button class="color-btn" style="background:#ff3333;" onclick="selectColor('red', this)">အနီ - ရောင်းပြီး</button>
+        <button class="color-btn" style="background:#ffcc00; color:#000;" onclick="selectColor('yellow', this)">အဝါ</button>
+        <button class="color-btn" style="background:#9933ee;" onclick="selectColor('purple', this)">ခရမ်း</button>
+        
+        <button class="reset-btn" id="resetBtn" onclick="handleResetClick()">Reset All (3 Clicks Left)</button>
+    </div>
+
+    <div class="seat-map-outer">
+        <div class="seat-map-inner">
+            <div class="screen-title">Paradiso Cinema Pyay - Seat Plan</div>
+            <div class="screen">SCREEN</div>
+            <div id="seatContainer"></div>
+        </div>
+    </div>
+
+    <div class="legend">
+        <div class="legend-item"><div class="legend-box" style="background:#ff3333;"></div> အနီ - ရောင်းပြီး</div>
+        <div class="legend-item"><div class="legend-box price-4000"></div> 4,000 Ks (A)</div>
+        <div class="legend-item"><div class="legend-box price-5000"></div> 5,000 Ks (B-D)</div>
+        <div class="legend-item"><div class="legend-box price-6000"></div> 6,000 Ks (E-F)</div>
+        <div class="legend-item"><div class="legend-box price-7000"></div> 7,000 Ks (G-H)</div>
+        <div class="legend-item"><div class="legend-box price-8000"></div> 8,000 Ks (I-Q)</div>
+        <div class="legend-item"><div class="legend-box price-20000"></div> 20,000 Ks (R-S)</div>
+    </div>
+
+    <script>
+        const seatStructure = [
+            { label: 'A', class: 'price-4000', seats: [26,25,24,23, 0, 22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5, 0, 4,3,2,1] },
+            { label: 'B', class: 'price-5000', seats: [26,25,24,23, 0, 22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5, 0, 4,3,2,1] },
+            { label: 'C', class: 'price-5000', seats: [26,25,24,23, 0, 22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5, 0, 4,3,2,1] },
+            { label: 'D', class: 'price-5000', seats: [26,25,24,23, 0, 22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5, 0, 4,3,2,1] },
+            { label: 'E', class: 'price-6000', seats: [26,25,24,23, 0, 22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5, 0, 4,3,2,1] },
+            { label: 'F', class: 'price-6000', seats: [26,25,24,23, 0, 22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5, 0, 4,3,2,1] },
+            { label: 'G', class: 'price-7000', seats: [26,25,24,23, 0, 22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5, 0, 4,3,2,1] },
+            { label: 'H', class: 'price-7000', seats: [26,25,24,23, 0, 22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5, 0, 4,3,2,1] },
+            { type: 'gap' },
+            { label: 'I', class: 'price-8000', seats: [20,19,18,17,16,15,14,13,12,11, 0,0,0,0,0,0,0,0, 10,9,8,7,6,5,4,3,2,1] },
+            { label: 'J', class: 'price-8000', seats: [20,19,18,17,16,15,14,13,12,11, 0,0,0,0,0,0,0,0, 10,9,8,7,6,5,4,3,2,1] },
+            { label: 'K', class: 'price-8000', seats: [20,19,18,17,16,15,14,13,12,11, 0,0,0,0,0,0,0,0, 10,9,8,7,6,5,4,3,2,1] },
+            { label: 'L', class: 'price-8000', seats: [20,19,18,17,16,15,14,13,12,11, 0,0,0,0,0,0,0,0, 10,9,8,7,6,5,4,3,2,1] },
+            { label: 'M', class: 'price-8000', seats: [24,23,22,21,20,19,18,17,16,15, 0,0, 14,13,12,11, 0,0, 10,9,8,7,6,5,4,3,2,1] },
+            { label: 'N', class: 'price-8000', seats: [24,23,22,21,20,19,18,17,16,15, 0,0, 14,13,12,11, 0,0, 10,9,8,7,6,5,4,3,2,1] },
+            { label: 'O', class: 'price-8000', seats: [24,23,22,21,20,19,18,17,16,15, 0,0, 14,13,12,11, 0,0, 10,9,8,7,6,5,4,3,2,1] },
+            { label: 'P', class: 'price-8000', seats: [24,23,22,21,20,19,18,17,16,15, 0,0, 14,13,12,11, 0,0, 10,9,8,7,6,5,4,3,2,1] },
+            { label: 'Q', class: 'price-8000', seats: [24,23,22,21,20,19,18,17,16,15, 0,0, 14,13,12,11, 0,0, 10,9,8,7,6,5,4,3,2,1] },
+            { type: 'gap' },
+            { label: 'R', class: 'price-20000', seats: [10,9,8,7,6, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 5,4,3,2,1] },
+            { label: 'S', class: 'price-20000', seats: [10,9,8,7,6, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 5,4,3,2,1] }
+        ];
+
+        let selectedAdminColor = null;
+
+        function selectColor(color, el) {
+            selectedAdminColor = color;
+            document.querySelectorAll('.color-btn').forEach(btn => btn.classList.remove('selected'));
+            el.classList.add('selected');
+        }
+
+        const container = document.getElementById('seatContainer');
+
+        seatStructure.forEach(row => {
+            if (row.type === 'gap') {
+                const gapDiv = document.createElement('div');
+                gapDiv.style.height = '16px';
+                container.appendChild(gapDiv);
+                return;
+            }
+
+            const rowDiv = document.createElement('div');
+            rowDiv.className = 'seat-row';
+
+            row.seats.forEach(num => {
+                if (num === 0) {
+                    const emptyDiv = document.createElement('div');
+                    emptyDiv.className = 'empty';
+                    rowDiv.appendChild(emptyDiv);
+                } else {
+                    const seatBtn = document.createElement('div');
+                    const seatId = 'seat-' + row.label + '-' + num;
+                    seatBtn.id = seatId;
+                    seatBtn.className = `seat ${row.class}`;
+                    seatBtn.innerText = num;
+                    
+                    seatBtn.onclick = () => {
+                        if (!selectedAdminColor) {
+                            alert('ကျေးဇူးပြု၍ အပေါ်ဘက်မှ အနီ/အဝါ/ခရမ်း ရောင်တစ်မျိုးမျိုးကို အရင်နှိပ်ပါ။');
+                            return;
+                        }
+                        const isCurrentlyColored = seatBtn.classList.contains('admin-' + selectedAdminColor);
+                        if (isCurrentlyColored) {
+                            seatBtn.classList.remove('admin-' + selectedAdminColor);
+                            window.updateSeatInFirebase(seatId, null);
+                        } else {
+                            seatBtn.classList.remove('admin-red', 'admin-yellow', 'admin-purple');
+                            seatBtn.classList.add('admin-' + selectedAdminColor);
+                            window.updateSeatInFirebase(seatId, selectedAdminColor);
+                        }
+                    };
+
+                    seatBtn.ondblclick = () => {
+                        seatBtn.classList.remove('admin-red', 'admin-yellow', 'admin-purple');
+                        window.updateSeatInFirebase(seatId, null);
+                    };
+
+                    rowDiv.appendChild(seatBtn);
+                }
+            });
+
+            const labelDiv = document.createElement('div');
+            labelDiv.className = 'row-label';
+            labelDiv.innerText = row.label;
+            rowDiv.appendChild(labelDiv);
+
+            container.appendChild(rowDiv);
+        });
+
+        // 3-Click Reset Functionality
+        let resetClickCount = 0;
+        let resetTimer = null;
+
+        function handleResetClick() {
+            resetClickCount++;
+            const resetBtn = document.getElementById('resetBtn');
+            const remaining = 3 - resetClickCount;
+
+            if (resetClickCount < 3) {
+                resetBtn.innerText = `Click ${remaining} More Time${remaining > 1 ? 's' : ''}`;
+                
+                clearTimeout(resetTimer);
+                resetTimer = setTimeout(() => {
+                    resetClickCount = 0;
+                    resetBtn.innerText = 'Reset All (3 Clicks Left)';
+                }, 2000);
+            } else {
+                clearTimeout(resetTimer);
+                document.querySelectorAll('.seat').forEach(seat => {
+                    seat.classList.remove('admin-red', 'admin-yellow', 'admin-purple');
+                });
+                window.resetAllFirebase();
+                resetClickCount = 0;
+                resetBtn.innerText = 'Cleared!';
+                setTimeout(() => {
+                    resetBtn.innerText = 'Reset All (3 Clicks Left)';
+                }, 1500);
+            }
+        }
+    </script>
+</body>
+</html>
