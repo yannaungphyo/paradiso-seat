@@ -1,0 +1,13 @@
+{
+  "name": "paradiso-server",
+  "version": "1.0.0",
+  "description": "Cinema Seat Socket.io Server",
+  "main": "server_2.js",
+  "scripts": {
+    "start": "node server_2.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.5.4"
+  }
+}
